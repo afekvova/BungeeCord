@@ -15,7 +15,7 @@ public class IpListCheck {
     }
 
     public int getCountUser(String ip) {
-        try (PreparedStatement statament = this.sqlConnection.getConnection().prepareStatement("select count(*) from Auth where `Ip` = '" + ip + "';");
+        try (PreparedStatement statament = this.sqlConnection.getConnection().prepareStatement("select count(Name) from Auth where `Ip` = '" + ip + "';");
              ResultSet set = statament.executeQuery()) {
             while (set.next()) {
                 int count = set.getInt(1);

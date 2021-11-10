@@ -86,7 +86,7 @@ public class SQLConnectionAuth {
     public void removeUserAuth(String name) {
         if (this.sqlConnection.getConnection() != null)
             this.sqlConnection.getExecutor().execute(() -> {
-                try (PreparedStatement statament = this.sqlConnection.getConnection().prepareStatement("REMOVE FROM `Auth` WHERE `Name` = '" + name.toLowerCase() + "';")) {
+                try (PreparedStatement statament = this.sqlConnection.getConnection().prepareStatement("DELETE FROM `Auth` WHERE `Name` = '" + name.toLowerCase() + "';")) {
                     statament.execute();
                 } catch (SQLException ignored) {
                 }

@@ -80,6 +80,7 @@ public class AuthCommand extends Command {
                     sender.sendMessage(StringCommon.color("%prefix% /auth unregister &f[&6игрок&f] - Удалить игрока"));
                     return;
                 }
+
                 this.tryUnRegister(sender, args[1]);
                 break;
             }
