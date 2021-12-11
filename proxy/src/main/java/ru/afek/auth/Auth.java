@@ -88,7 +88,7 @@ public class Auth {
 
         authUser.setPassword(hash);
         this.saveUser(name, authUser);
-        this.getEmailSystem().sendNewPasswordEmailMessage(authUser.getEmail(), authUser.getEmail(), password);
+        this.getEmailSystem().sendNewPasswordEmailMessage(authUser.getName(), authUser.getEmail(), password);
         return true;
     }
 
