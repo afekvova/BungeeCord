@@ -1,6 +1,19 @@
 package ru.leymooo.botfilter;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.InetAddress;
+import java.net.URL;
+import java.net.URLConnection;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import lombok.Getter;
 import lombok.Setter;
 import net.md_5.bungee.BungeeCord;
@@ -19,19 +32,9 @@ import ru.leymooo.botfilter.captcha.CaptchaGeneration;
 import ru.leymooo.botfilter.config.Settings;
 import ru.leymooo.botfilter.utils.GeoIp;
 import ru.leymooo.botfilter.utils.ManyChecksUtils;
-import ru.leymooo.botfilter.utils.SQLConnectionBotFilter;
+import ru.leymooo.botfilter.utils.SQLBotFilter;
 import ru.leymooo.botfilter.utils.ServerPingUtils;
 
-import java.net.InetAddress;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.logging.Level;
-
-/**
- * @author Leymooo
- */
 public class BotFilter
 {
 
@@ -46,7 +49,7 @@ public class BotFilter
     private final ExecutorService executor;
 
     @Getter
-    private final SQLConnectionBotFilter sql;
+    private final SQLBotFilter sql;
     @Getter
     private final GeoIp geoIp;
     @Getter
@@ -64,15 +67,19 @@ public class BotFilter
     @Getter
     private boolean forceProtectionEnabled = false;
 
-    public BotFilter(boolean startup, SQLConnection sqlConnection) {
+    public BotFilter(boolean startup, SQLConnection sqlConnection)
+    {
+        Settings.IMP.reload( new File( "BotFilter", "config.yml" ) );
         Scoreboard.DISABLE_DUBLICATE = Settings.IMP.FIX_SCOREBOARD_TEAMS;
         if ( !CachedCaptcha.generated )
+        {
             CaptchaGeneration.generateImages();
+        }
         normalState = getCheckState( Settings.IMP.PROTECTION.NORMAL );
         attackState = getCheckState( Settings.IMP.PROTECTION.ON_ATTACK );
         PacketUtils.init();
-        sql = new SQLConnectionBotFilter(this, sqlConnection);
-        geoIp = new GeoIp( startup );
+        sql = new SQLBotFilter(this, sqlConnection);
+        geoIp = new GeoIp(startup );
         serverPingUtils = new ServerPingUtils( this );
 
         if ( geoIp.isAvailable() )
@@ -250,6 +257,26 @@ public class BotFilter
         }
         return botFilterUser == null || ( Settings.IMP.FORCE_CHECK_ON_ATTACK && isUnderAttack() )
             || !botFilterUser.getIp().equalsIgnoreCase( address.getHostAddress() );
+    }
+
+    public boolean needCheck(InitialHandler connection)
+    {
+        if ( Settings.IMP.PROTECTION.ALWAYS_CHECK )
+        {
+            return true;
+        }
+
+        if ( Settings.IMP.PROTECTION.SKIP_GEYSER && isGeyser( connection ) )
+        {
+            return isUnderAttack();
+        }
+
+        return needCheck( connection.getName(), connection.getAddress().getAddress() );
+    }
+
+    public boolean isGeyser(InitialHandler connection)
+    {
+        return connection.getExtraDataInHandshake().contains( "Floodgate" );
     }
 
     /**

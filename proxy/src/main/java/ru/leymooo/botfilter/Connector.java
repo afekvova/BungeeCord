@@ -2,6 +2,9 @@ package ru.leymooo.botfilter;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -10,6 +13,7 @@ import net.md_5.bungee.UserConnection;
 import net.md_5.bungee.Util;
 import net.md_5.bungee.compress.PacketDecompressor;
 import net.md_5.bungee.netty.ChannelWrapper;
+import net.md_5.bungee.netty.HandlerBoss;
 import net.md_5.bungee.protocol.PacketWrapper;
 import net.md_5.bungee.protocol.Protocol;
 import net.md_5.bungee.protocol.packet.Chat;
@@ -17,6 +21,7 @@ import net.md_5.bungee.protocol.packet.ClientSettings;
 import net.md_5.bungee.protocol.packet.KeepAlive;
 import net.md_5.bungee.protocol.packet.PluginMessage;
 import ru.afek.auth.Auth;
+import ru.afek.auth.AuthConnector;
 import ru.leymooo.botfilter.BotFilter.CheckState;
 import ru.leymooo.botfilter.caching.CachedCaptcha.CaptchaHolder;
 import ru.leymooo.botfilter.caching.PacketUtils;
@@ -26,10 +31,6 @@ import ru.leymooo.botfilter.config.Settings;
 import ru.leymooo.botfilter.utils.FailedUtils;
 import ru.leymooo.botfilter.utils.IPUtils;
 import ru.leymooo.botfilter.utils.ManyChecksUtils;
-
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * @author Leymooo
@@ -79,6 +80,11 @@ public class Connector extends MoveHandler
         this.userConnection.setClientEntityId( PacketUtils.CLIENTID );
         this.userConnection.setDimension( 0 );
         this.ip = IPUtils.getAddress( this.userConnection ).getHostAddress();
+
+        if ( Settings.IMP.PROTECTION.SKIP_GEYSER && botFilter.isGeyser( userConnection.getPendingConnection() ) )
+        {
+            this.state = CheckState.ONLY_CAPTCHA;
+        }
     }
 
 
@@ -191,9 +197,12 @@ public class Connector extends MoveHandler
         botFilter.saveUser( getName(), IPUtils.getAddress( userConnection ), true );
         PacketDecompressor packetDecompressor = channel.pipeline().get( PacketDecompressor.class );
         if ( packetDecompressor != null )
+        {
             packetDecompressor.checking = false;
+        }
 
         markDisconnected = true;
+
         Auth auth = BungeeCord.getInstance().getAuth();
         if (auth.needCheck(this.name, this.userConnection
                 .getAddress().getAddress())) {
@@ -331,12 +340,9 @@ public class Connector extends MoveHandler
             return;
         }
 
-        if ( PluginMessage.SHOULD_RELAY.apply( pluginMessage ) )
+        if ( !userConnection.getPendingConnection().relayMessage0( pluginMessage ) )
         {
-            userConnection.getPendingConnection().getRelayMessages().add( pluginMessage );
-        } else
-        {
-            userConnection.getDelayedPluginMessages().add( pluginMessage );
+            userConnection.addDelayedPluginMessage( pluginMessage );
         }
 
     }

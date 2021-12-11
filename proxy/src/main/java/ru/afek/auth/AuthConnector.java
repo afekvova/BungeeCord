@@ -1,41 +1,28 @@
 package ru.afek.auth;
 
+import com.google.common.base.Preconditions;
+import com.mojang.brigadier.context.StringRange;
+import com.mojang.brigadier.suggestion.Suggestion;
 import io.netty.buffer.ByteBuf;
-import ru.afek.auth.hash.RandomString;
+import io.netty.channel.Channel;
+import net.md_5.bungee.BungeeCord;
+import net.md_5.bungee.UserConnection;
+import net.md_5.bungee.Util;
+import net.md_5.bungee.netty.ChannelWrapper;
+import net.md_5.bungee.protocol.Protocol;
+import net.md_5.bungee.protocol.packet.*;
+import ru.afek.auth.config.SettingsAuth;
+import ru.afek.auth.hash.PasswordSecurity;
+import ru.afek.auth.utils.BlackListIp;
 import ru.afek.bungeecord.commons.MethodCommon;
 import ru.afek.bungeecord.commons.StringCommon;
-import ru.leymooo.botfilter.caching.CachedTitle;
+import ru.leymooo.botfilter.caching.PacketUtils;
+import ru.leymooo.botfilter.caching.PacketsPosition;
 import ru.leymooo.botfilter.utils.FailedUtils;
-import net.md_5.bungee.protocol.Protocol;
-import net.md_5.bungee.protocol.packet.PluginMessage;
-import net.md_5.bungee.protocol.packet.KeepAlive;
-import net.md_5.bungee.protocol.packet.ClientSettings;
-import ru.afek.auth.utils.BlackListIp;
+import ru.leymooo.botfilter.utils.IPUtils;
 
 import java.security.NoSuchAlgorithmException;
-
-import ru.afek.auth.hash.PasswordSecurity;
-import ru.afek.auth.config.SettingsAuth;
-import net.md_5.bungee.protocol.packet.Chat;
-import com.mojang.brigadier.suggestion.Suggestion;
-import com.mojang.brigadier.context.StringRange;
-import net.md_5.bungee.protocol.packet.TabCompleteResponse;
-import net.md_5.bungee.protocol.packet.TabCompleteRequest;
-
-import net.md_5.bungee.BungeeCord;
-import net.md_5.bungee.netty.ChannelWrapper;
-import net.md_5.bungee.Util;
-
 import java.util.logging.Level;
-
-import ru.leymooo.botfilter.caching.PacketsPosition;
-import ru.leymooo.botfilter.utils.IPUtils;
-import ru.leymooo.botfilter.caching.PacketUtils;
-import com.google.common.base.Preconditions;
-import io.netty.channel.Channel;
-
-import net.md_5.bungee.UserConnection;
-
 import java.util.logging.Logger;
 
 public class AuthConnector extends MoveHandlerAuth {
@@ -273,7 +260,7 @@ public class AuthConnector extends MoveHandlerAuth {
             return;
         }
 
-        final AuthUser user = new AuthUser(this.name.toLowerCase(), hash, this.ip, System.currentTimeMillis(), "null");
+        final AuthUser user = new AuthUser(this.name.toLowerCase(), hash, this.ip, System.currentTimeMillis(), "null", SettingsAuth.IMP.USER_COUNT);
         this.auth.saveUser(this.name, user);
         this.state = Auth.CheckStateAuth.SUCCESSFULLY;
         this.completeCheck(false);
@@ -343,10 +330,8 @@ public class AuthConnector extends MoveHandlerAuth {
 
     @Override
     public void handle(final PluginMessage pluginMessage) throws Exception {
-        if (PluginMessage.SHOULD_RELAY.apply(pluginMessage)) {
-            this.userConnection.getPendingConnection().getRelayMessages().add(pluginMessage);
-        } else {
-            this.userConnection.getDelayedPluginMessages().add(pluginMessage);
+        if (!userConnection.getPendingConnection().relayMessage0(pluginMessage)) {
+            userConnection.addDelayedPluginMessage(pluginMessage);
         }
     }
 

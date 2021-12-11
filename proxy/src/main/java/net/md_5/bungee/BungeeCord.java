@@ -11,22 +11,76 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.util.ResourceLeakDetector;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Map;
+import java.util.MissingResourceException;
+import java.util.PropertyResourceBundle;
+import java.util.ResourceBundle;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import jline.console.ConsoleReader;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.Synchronized;
-import net.md_5.bungee.api.*;
-import net.md_5.bungee.api.chat.*;
+import net.md_5.bungee.api.CommandSender;
+import net.md_5.bungee.api.Favicon;
+import net.md_5.bungee.api.ProxyServer;
+import net.md_5.bungee.api.ReconnectHandler;
+import net.md_5.bungee.api.ServerPing;
+import net.md_5.bungee.api.Title;
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.api.chat.KeybindComponent;
+import net.md_5.bungee.api.chat.ScoreComponent;
+import net.md_5.bungee.api.chat.SelectorComponent;
+import net.md_5.bungee.api.chat.TextComponent;
+import net.md_5.bungee.api.chat.TranslatableComponent;
 import net.md_5.bungee.api.config.ConfigurationAdapter;
 import net.md_5.bungee.api.config.ListenerInfo;
 import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.api.plugin.PluginManager;
-import net.md_5.bungee.chat.*;
-import net.md_5.bungee.command.*;
+import net.md_5.bungee.chat.ComponentSerializer;
+import net.md_5.bungee.chat.KeybindComponentSerializer;
+import net.md_5.bungee.chat.ScoreComponentSerializer;
+import net.md_5.bungee.chat.SelectorComponentSerializer;
+import net.md_5.bungee.chat.TextComponentSerializer;
+import net.md_5.bungee.chat.TranslatableComponentSerializer;
+import net.md_5.bungee.command.CommandBungee;
+import net.md_5.bungee.command.CommandEnd;
+import net.md_5.bungee.command.CommandIP;
+import net.md_5.bungee.command.CommandPerms;
+import net.md_5.bungee.command.CommandReload;
+import net.md_5.bungee.command.CommandReloadServers;
+import net.md_5.bungee.command.ConsoleCommandCompleter;
+import net.md_5.bungee.command.ConsoleCommandSender;
 import net.md_5.bungee.compress.CompressFactory;
 import net.md_5.bungee.conf.Configuration;
 import net.md_5.bungee.conf.YamlConfig;
@@ -52,22 +106,6 @@ import ru.leymooo.botfilter.BotFilterCommand;
 import ru.leymooo.botfilter.BotFilterThread;
 import ru.leymooo.botfilter.config.Settings;
 import ru.leymooo.botfilter.utils.FakeOnlineUtils;
-
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.text.MessageFormat;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Handler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Main BungeeCord proxy class.
@@ -154,10 +192,10 @@ public class BungeeCord extends ProxyServer
     private BotFilter botFilter; //BotFilter
     @Getter
     @Setter
-    private SQLConnection sqlConnection; //Auth
+    private Auth auth; //BotFilter
     @Getter
     @Setter
-    private Auth auth; //Auth
+    private SQLConnection sqlConnection;
 
     {
         registerChannel( "BungeeCord" );
@@ -173,8 +211,6 @@ public class BungeeCord extends ProxyServer
     {
         // Java uses ! to indicate a resource inside of a jar/zip/other container. Running Bungee from within a directory that has a ! will cause this to muck up.
         Preconditions.checkState( new File( "." ).getAbsolutePath().indexOf( '!' ) == -1, "Cannot use BungeeCord in directory with ! in path." );
-
-        System.setSecurityManager( new BungeeSecurityManager() );
 
         try
         {
@@ -219,7 +255,6 @@ public class BungeeCord extends ProxyServer
         getPluginManager().registerCommand(null, new WhiteListCommand()); //Auth
         getPluginManager().registerCommand(null, new RecoveryCommand()); //Auth
         getPluginManager().registerCommand(null, new ChangePasswordCommand()); //Auth
-
         if ( !Boolean.getBoolean( "net.md_5.bungee.native.disable" ) )
         {
             if ( EncryptionUtil.nativeFactory.load() )
@@ -260,7 +295,7 @@ public class BungeeCord extends ProxyServer
         this.sqlConnection = new SQLConnection(); //connect sql
 
         //load configs
-        Settings.IMP.reload( new File( "BotFilter", "config.yml" ));
+        Settings.IMP.reload(new File("BotFilter", "config.yml"));
         SettingsAuth.IMP.reload(new File("Auth", "config.yml"));
 
         this.botFilter = new BotFilter(true, sqlConnection); //Hook BotFilter into Bungee
@@ -426,6 +461,11 @@ public class BungeeCord extends ProxyServer
     @SuppressWarnings("TooBroadCatch")
     private void independentThreadStop(final String reason, boolean callSystemExit)
     {
+
+        this.sqlConnection.close();
+        this.getBotFilter().disable();
+        this.getAuth().disable();
+
         // Acquire the shutdown lock
         // This needs to actually block here, otherwise running 'end' and then ctrl+c will cause the thread to terminate prematurely
         shutdownLock.lock();
@@ -542,7 +582,7 @@ public class BungeeCord extends ProxyServer
     @Override
     public String getName()
     {
-        return "BotFilter"; //BotFilter
+        return "ABungee"; //BotFilter
     }
 
     @Override

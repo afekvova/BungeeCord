@@ -5,18 +5,18 @@ import com.google.common.base.Preconditions;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
-import lombok.RequiredArgsConstructor;
-import ru.leymooo.botfilter.utils.FastBadPacketException;
-import ru.leymooo.botfilter.utils.FastException;
-import se.llbit.nbt.NamedTag;
-import se.llbit.nbt.Tag;
-
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import ru.leymooo.botfilter.utils.FastBadPacketException;
+import ru.leymooo.botfilter.utils.FastException;
+import ru.leymooo.botfilter.utils.FastOverflowPacketException;
+import se.llbit.nbt.NamedTag;
+import se.llbit.nbt.Tag;
 
 @RequiredArgsConstructor
 public abstract class DefinedPacket
@@ -29,7 +29,8 @@ public abstract class DefinedPacket
     {
         if ( s.length() > Short.MAX_VALUE )
         {
-            throw new OverflowPacketException( "Cannot send string longer than Short.MAX_VALUE (got " + s.length() + " characters)" ); }
+            throw new OverflowPacketException( "Cannot send string longer than Short.MAX_VALUE (got " + s.length() + " characters)" );
+        }
 
         byte[] b = s.getBytes( Charsets.UTF_8 );
         writeVarInt( b.length, buf );
@@ -46,7 +47,8 @@ public abstract class DefinedPacket
         int len = readVarInt( buf );
         if ( len > maxLen * 4 )
         {
-            throw new OverflowPacketException( "Cannot receive string longer than " + maxLen * 4 + " (got " + len + " bytes)" ); }
+            throw new FastOverflowPacketException( "Cannot receive string longer than " + maxLen * 4 + " (got " + len + " bytes)" );
+        }
 
         byte[] b = new byte[ len ];
         buf.readBytes( b );
@@ -54,7 +56,8 @@ public abstract class DefinedPacket
         String s = new String( b, Charsets.UTF_8 );
         if ( s.length() > maxLen )
         {
-            throw new OverflowPacketException( "Cannot receive string longer than " + maxLen + " (got " + s.length() + " characters)" ); }
+            throw new FastOverflowPacketException( "Cannot receive string longer than " + maxLen + " (got " + s.length() + " characters)" );
+        }
 
         return s;
     }
@@ -63,7 +66,8 @@ public abstract class DefinedPacket
     {
         if ( b.length > Short.MAX_VALUE )
         {
-            throw new OverflowPacketException( "Cannot send byte array longer than Short.MAX_VALUE (got " + b.length + " bytes)" );  }
+            throw new OverflowPacketException( "Cannot send byte array longer than Short.MAX_VALUE (got " + b.length + " bytes)" );
+        }
         writeVarInt( b.length, buf );
         buf.writeBytes( b );
     }
@@ -86,7 +90,8 @@ public abstract class DefinedPacket
         int len = readVarInt( buf );
         if ( len > limit )
         {
-            throw new OverflowPacketException( "Cannot receive byte array longer than " + limit + " (got " + len + " bytes)" ); }
+            throw new FastOverflowPacketException( "Cannot receive byte array longer than " + limit + " (got " + len + " bytes)" );
+        }
         byte[] ret = new byte[ len ];
         buf.readBytes( ret );
         return ret;

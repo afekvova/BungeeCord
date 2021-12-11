@@ -3,6 +3,8 @@ package ru.leymooo.botfilter.caching;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import java.util.HashMap;
+import java.util.Random;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -18,10 +20,13 @@ import net.md_5.bungee.protocol.packet.PluginMessage;
 import ru.afek.auth.config.SettingsAuth;
 import ru.afek.auth.utils.CachedActionBar;
 import ru.leymooo.botfilter.config.Settings;
-import ru.leymooo.botfilter.packets.*;
-
-import java.util.HashMap;
-import java.util.Random;
+import ru.leymooo.botfilter.packets.EmptyChunkPacket;
+import ru.leymooo.botfilter.packets.JoinGame;
+import ru.leymooo.botfilter.packets.PlayerAbilities;
+import ru.leymooo.botfilter.packets.PlayerPositionAndLook;
+import ru.leymooo.botfilter.packets.SetExp;
+import ru.leymooo.botfilter.packets.SetSlot;
+import ru.leymooo.botfilter.packets.TimeUpdate;
 
 /**
  * @author Leymooo
@@ -74,7 +79,10 @@ public class PacketUtils
             }
         }
         if (actionBar != null) actionBar.release();
-        for (CachedPacket packet : kickMessagesGame.values())packet.release();
+        for ( CachedPacket packet : kickMessagesGame.values() )
+        {
+            packet.release();
+        }
         kickMessagesGame.clear();
 
         expPackets = new CachedExpPackets();
@@ -82,6 +90,7 @@ public class PacketUtils
         titles[0] = new CachedTitle( Settings.IMP.MESSAGES.CHECKING_TITLE, 5, 90, 15 );
         titles[1] = new CachedTitle( Settings.IMP.MESSAGES.CHECKING_TITLE_CAPTCHA, 5, 35, 10 );
         titles[2] = new CachedTitle( Settings.IMP.MESSAGES.CHECKING_TITLE_SUS, 5, 20, 10 );
+
         actionBar = new CachedActionBar(SettingsAuth.IMP.LOGIN.EMAIL_RECOVERY_ACTION_BAR, 5, 20, 10);
 
         DefinedPacket[] packets =
@@ -123,7 +132,6 @@ public class PacketUtils
         kickMessagesLogin.put( KickType.COUNTRY, new CachedPacket( createKickPacket( Settings.IMP.MESSAGES.KICK_COUNTRY ), kickLogin ) );
     }
 
-
     public static DefinedPacket createMessagePacketAuth(String message) {
         if (message.isEmpty())
             return null;
@@ -144,7 +152,7 @@ public class PacketUtils
                     message.replace( "%prefix%", Settings.IMP.MESSAGES.PREFIX ).replace( "%nl%", "\n" ) ) ) ) );
     }
 
-    private static DefinedPacket createMessagePacket(String message)
+    public static DefinedPacket createMessagePacket(String message)
     {
         if ( message.isEmpty() )
         {
@@ -295,6 +303,8 @@ public class PacketUtils
                 return 27;
             case ProtocolConstants.MINECRAFT_1_17_1:
                 return 28;
+            case ProtocolConstants.MINECRAFT_1_18:
+                return 29;
             default:
                 throw new IllegalArgumentException( "Version is not supported" );
         }

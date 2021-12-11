@@ -1,26 +1,20 @@
 package ru.afek.auth.command;
 
+import net.md_5.bungee.BungeeCord;
 import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.CommandSender;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
-import net.md_5.bungee.chat.ComponentSerializer;
-import net.md_5.bungee.netty.ChannelWrapper;
-import net.md_5.bungee.protocol.Protocol;
-import net.md_5.bungee.protocol.packet.Kick;
-import ru.afek.auth.AuthUser;
-
-import java.security.NoSuchAlgorithmException;
-
-import ru.afek.auth.hash.PasswordSecurity;
-
-import ru.afek.auth.Auth;
-import net.md_5.bungee.BungeeCord;
-
-import ru.afek.auth.config.SettingsAuth;
-import net.md_5.bungee.api.CommandSender;
 import net.md_5.bungee.api.plugin.Command;
+import ru.afek.auth.Auth;
+import ru.afek.auth.AuthUser;
+import ru.afek.auth.config.SettingsAuth;
+import ru.afek.auth.hash.PasswordSecurity;
 import ru.afek.bungeecord.commons.MethodCommon;
 import ru.afek.bungeecord.commons.StringCommon;
+
+import java.security.NoSuchAlgorithmException;
+import java.util.Set;
 
 /**
  * @author Afek
@@ -80,7 +74,18 @@ public class AuthCommand extends Command {
                     sender.sendMessage(StringCommon.color("%prefix% /auth unregister &f[&6игрок&f] - Удалить игрока"));
                     return;
                 }
+
                 this.tryUnRegister(sender, args[1]);
+                break;
+            }
+
+            case "info": {
+                if (args.length != 2) {
+                    sender.sendMessage(StringCommon.color("%prefix% &6/auth info &f[&6игрок&f] - посмотреть информацию о игроке"));
+                    return;
+                }
+
+                this.sendPlayerInfo(sender, args[1]);
                 break;
             }
 
@@ -103,6 +108,21 @@ public class AuthCommand extends Command {
                 }
 
                 this.changeEmail(sender, args[1], args[2]);
+                break;
+            }
+
+            case "accountlimit": {
+                if (args.length != 3) {
+                    sender.sendMessage(StringCommon.color("%prefix% /auth accountlimit &f[&6игрок&f] [&6количество&f] - Изменить количество аккаунтов игроку"));
+                    return;
+                }
+
+                if (!this.isStringInt(args[2])) {
+                    sender.sendMessage(StringCommon.color("%prefix% /auth accountlimit &f[&6игрок&f] [&6количество&f] - Изменить количество аккаунтов игроку"));
+                    return;
+                }
+
+                this.setAccountIpLimit(sender, args[1], Integer.parseInt(args[2]));
                 break;
             }
 
@@ -170,7 +190,7 @@ public class AuthCommand extends Command {
         } catch (NoSuchAlgorithmException e) {
             return;
         }
-        final AuthUser user = new AuthUser(name.toLowerCase(), hash, "0.0.0.0", -1L, "null");
+        final AuthUser user = new AuthUser(name.toLowerCase(), hash, "0.0.0.0", -1L, "null", SettingsAuth.IMP.USER_COUNT);
         BungeeCord.getInstance().getAuth().saveUser(name, user);
         sender.sendMessage(StringCommon.color("&f[&6!&f] &l&fВы успешно зарегистрировали игрока - &6" + name));
     }
@@ -183,6 +203,8 @@ public class AuthCommand extends Command {
         sender.sendMessage(StringCommon.color("&6/auth unregister &f[&6игрок&f] - Удалить игрока"));
         sender.sendMessage(StringCommon.color("&6/auth changepassword &f[&6игрок&f] [&6пароль&f] - Изменить пароль игроку"));
         sender.sendMessage(StringCommon.color("&6/auth changeemail &f[&6игрок&f] [&6эл. почта&f] - Изменить почту игроку"));
+        sender.sendMessage(StringCommon.color("&6/auth accountlimit &f[&6игрок&f] [&6количество&f] - Изменить количество аккаунтов игроку"));
+        sender.sendMessage(StringCommon.color("&6/auth info &f[&6игрок&f] - Посмотреть информацию о игроке"));
     }
 
     private void sendStat(CommandSender sender) {
@@ -193,5 +215,35 @@ public class AuthCommand extends Command {
         sender.sendMessage(StringCommon.color(prefix + "Игроки которые прошли авторизацию: &6&l" + auth.getUsersCount()));
         sender.sendMessage(StringCommon.color(prefix + "Игроков зарегистрировано: &6&l" + auth.getRegisteredSize()));
         sender.sendMessage(StringCommon.color(prefix + "Обратится к автору - &6vk.com/afekvova &f| &6afek.ru &f| &6t.me/afekvova"));
+    }
+
+    private void sendPlayerInfo(CommandSender sender, String name) {
+        final Auth auth = BungeeCord.getInstance().getAuth();
+        if (!auth.isRegistered(name.toLowerCase())) {
+            sender.sendMessage(StringCommon.color("&f[&6!&f]&l&f Такого игрока нету в базе данных!"));
+            return;
+        }
+
+        final String ip = auth.getUser(name).getIp();
+        sender.sendMessage(StringCommon.color("&f&m+----&6&m----&f&m----&6&m----&f&m----&6 &f&lИнформация о игроке - &6" + name + " &r&6&m----&f&m----&6&m----&f&m----&6&m----+"));
+        sender.sendMessage(StringCommon.color(" (1) Айпи: &6" + ip));
+        final Set<String> similarPlayers = auth.getSql().getEqualIp(name, ip);
+        String message = similarPlayers.isEmpty() ? "Игрок зарегистрировал только 1 аккаунт!" : String.join(", ", similarPlayers);
+        sender.sendMessage(" (2) Игроки с идентичным адресом: " + message);
+    }
+
+    private void setAccountIpLimit(CommandSender sender, String name, int limit) {
+        Auth auth = BungeeCord.getInstance().getAuth();
+        sender.sendMessage(StringCommon.color("&f[&6!&f]&l&f Вы успешно изменили количество аккаунтов игроку - &6" + name));
+        auth.getSql().saveUserIpLimit(name, limit);
+    }
+
+    public boolean isStringInt(String s) {
+        try {
+            Integer.parseInt(s);
+            return true;
+        } catch (NumberFormatException ex) {
+            return false;
+        }
     }
 }

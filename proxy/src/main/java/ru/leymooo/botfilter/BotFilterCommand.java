@@ -1,11 +1,5 @@
 package ru.leymooo.botfilter;
 
-import net.md_5.bungee.BungeeCord;
-import net.md_5.bungee.api.CommandSender;
-import net.md_5.bungee.api.connection.ProxiedPlayer;
-import net.md_5.bungee.api.plugin.Command;
-import ru.leymooo.botfilter.config.Settings;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -16,6 +10,11 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.logging.Level;
+import net.md_5.bungee.BungeeCord;
+import net.md_5.bungee.api.CommandSender;
+import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.md_5.bungee.api.plugin.Command;
+import ru.leymooo.botfilter.config.Settings;
 
 public class BotFilterCommand extends Command
 {
@@ -44,7 +43,7 @@ public class BotFilterCommand extends Command
         } else if ( args[0].equalsIgnoreCase( "reload" ) )
         {
             BungeeCord.getInstance().getBotFilter().disable();
-            BungeeCord.getInstance().setBotFilter(new BotFilter(false, null));
+            BungeeCord.getInstance().setBotFilter( new BotFilter( false, BungeeCord.getInstance().getSqlConnection()) );
             sender.sendMessage( "§aКоманда выполнена" );
         } else if ( args[0].equalsIgnoreCase( "stat" ) || args[0].equalsIgnoreCase( "stats" ) || args[0].equalsIgnoreCase( "info" ) )
         {

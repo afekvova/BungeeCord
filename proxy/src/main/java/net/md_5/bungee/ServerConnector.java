@@ -1,9 +1,11 @@
 package net.md_5.bungee;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Queue;
 import java.util.Set;
@@ -196,9 +198,16 @@ public class ServerConnector extends PacketHandler
             }
         }
 
-        for ( PluginMessage message : user.getPendingConnection().getRelayMessages() )
+        PluginMessage brandMessage = user.getPendingConnection().getBrandMessage();
+        if ( brandMessage != null )
         {
-            ch.write( message );
+            ch.write( brandMessage );
+        }
+
+        Set<String> registeredChannels = user.getPendingConnection().getRegisteredChannels();
+        if ( !registeredChannels.isEmpty() )
+        {
+            ch.write( new PluginMessage( user.getPendingConnection().getVersion() >= ProtocolConstants.MINECRAFT_1_13 ? "minecraft:register" : "REGISTER", Joiner.on( "\0" ).join( registeredChannels ).getBytes( StandardCharsets.UTF_8 ), false ) );
         }
 
         if ( user.getSettings() != null )
@@ -213,18 +222,17 @@ public class ServerConnector extends PacketHandler
 
         if ( user.isNeedLogin() || !( login.getDimension() instanceof Integer ) ) //BotFilter
         {
-            user.setNeedLogin( false ); //BotFilter
             // Once again, first connection
             user.setClientEntityId( login.getEntityId() );
             user.setServerEntityId( login.getEntityId() );
 
             // Set tab list size, TODO: what shall we do about packet mutability
             Login modLogin = new Login( login.getEntityId(), login.isHardcore(), login.getGameMode(), login.getPreviousGameMode(), login.getWorldNames(), login.getDimensions(), login.getDimension(), login.getWorldName(), login.getSeed(), login.getDifficulty(),
-                    (byte) user.getPendingConnection().getListener().getTabListSize(), login.getLevelType(), login.getViewDistance(), login.isReducedDebugInfo(), login.isNormalRespawn(), login.isDebug(), login.isFlat() );
+                    (byte) user.getPendingConnection().getListener().getTabListSize(), login.getLevelType(), login.getViewDistance(), login.getSimulationDistance(), login.isReducedDebugInfo(), login.isNormalRespawn(), login.isDebug(), login.isFlat() );
 
             user.unsafe().sendPacket( modLogin );
 
-            if ( !user.isNeedLogin() ) //BotFilter
+            if ( !user.isNeedLogin() ) //BotFilter //if false, means user came from captcha or server switch
             {
                 if ( user.getServer() != null ) //BotFilter
                 {
@@ -248,8 +256,9 @@ public class ServerConnector extends PacketHandler
                 {
                     user.getServer().disconnect( "Quitting" ); //BotFilter
                 }
-            } else if ( user.isNeedLogin() ) //BotFilters
+            } else if ( user.isNeedLogin() ) //BotFilter
             {
+                user.setNeedLogin( false ); //BotFilter
                 ByteBuf brand = ByteBufAllocator.DEFAULT.heapBuffer();
                 DefinedPacket.writeString( "BotFilter (https://vk.cc/8hr1pU)", brand );
                 user.unsafe().sendPacket( new PluginMessage( user.getPendingConnection().getVersion() >= ProtocolConstants.MINECRAFT_1_13 ? "minecraft:brand" : "MC|Brand", DefinedPacket.toArray( brand ), handshakeHandler.isServerForge() ) );

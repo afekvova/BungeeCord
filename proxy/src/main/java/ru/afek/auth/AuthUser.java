@@ -1,26 +1,21 @@
 package ru.afek.auth;
 
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.FieldDefaults;
 
+@Setter
+@Getter
+@FieldDefaults(level = AccessLevel.PRIVATE)
 @AllArgsConstructor
 public class AuthUser {
 
-    @Getter
-    private String name;
-    @Getter
-    @Setter
-    private String password;
-    @Getter
-    @Setter
-    private String ip;
-    @Getter
-    @Setter
-    private long session;
-    @Getter
-    @Setter
-    private String email;
+    String name, password, ip;
+    long session;
+    String email;
+    int ipLimit;
 
     public void logout() {
         this.session = -1L;

@@ -1,6 +1,8 @@
 package ru.afek.auth;
 
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.experimental.FieldDefaults;
 import net.md_5.bungee.BungeeCord;
 import net.md_5.bungee.UserConnection;
 import net.md_5.bungee.netty.HandlerBoss;
@@ -20,29 +22,22 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Afek
  */
 
+@Getter
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class Auth {
 
-    @Getter
-    private final Map<String, AuthConnector> connectedUsersSet;
-    @Getter
-    private final Map<String, AuthUser> userCache;
-    @Getter
-    private final Map<String, VerifyCode> verifyCode;
-    @Getter
-    private final SQLConnectionAuth sql;
-    @Getter
-    private final EmailSystem emailSystem;
-    @Getter
-    private final IpListCheck ipListCheck;
-    @Getter
-    private final WhiteList whiteList;
+    Map<String, AuthConnector> connectedUsersSet;
+    Map<String, AuthUser> userCache;
+    Map<String, VerifyCode> verifyCode;
+    SQLConnectionAuth sql;
+    EmailSystem emailSystem;
+    WhiteList whiteList;
 
     public Auth(SQLConnection sql) {
         this.connectedUsersSet = new ConcurrentHashMap<>();
         this.userCache = new ConcurrentHashMap<>();
         this.verifyCode = new ConcurrentHashMap<>();
         this.sql = new SQLConnectionAuth(this, sql);
-        this.ipListCheck = new IpListCheck(sql);
         this.emailSystem = new EmailSystem();
         this.whiteList = new WhiteList();
         AuthThread.start();
@@ -51,10 +46,10 @@ public class Auth {
     public void disable() {
         AuthThread.stop();
         BlackListIp.cleanUP();
-        for (final AuthConnector connector : this.connectedUsersSet.values()) {
+        for (final AuthConnector connector : this.connectedUsersSet.values())
             if (connector.getUserConnection() != null)
                 connector.getUserConnection().disconnect(StringCommon.color("&f[&6Auth&f] Перезагрузка авторизации"));
-        }
+
         this.whiteList.saveUsers();
         this.verifyCode.clear();
         this.connectedUsersSet.clear();

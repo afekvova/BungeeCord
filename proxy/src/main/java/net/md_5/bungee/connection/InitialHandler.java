@@ -3,17 +3,42 @@ package net.md_5.bungee.connection;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.gson.Gson;
+import java.math.BigInteger;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+import java.util.logging.Level;
+import javax.crypto.SecretKey;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import net.md_5.bungee.*;
-import net.md_5.bungee.api.*;
+import net.md_5.bungee.BungeeCord;
+import net.md_5.bungee.BungeeServerInfo;
+import net.md_5.bungee.EncryptionUtil;
+import net.md_5.bungee.UserConnection;
+import net.md_5.bungee.Util;
+import net.md_5.bungee.api.AbstractReconnectHandler;
+import net.md_5.bungee.api.Callback;
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.Favicon;
+import net.md_5.bungee.api.ServerPing;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.config.ListenerInfo;
 import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.api.connection.PendingConnection;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
-import net.md_5.bungee.api.event.*;
+import net.md_5.bungee.api.event.LoginEvent;
+import net.md_5.bungee.api.event.PlayerHandshakeEvent;
+import net.md_5.bungee.api.event.PlayerSetUUIDEvent;
+import net.md_5.bungee.api.event.PostLoginEvent;
+import net.md_5.bungee.api.event.PreLoginEvent;
+import net.md_5.bungee.api.event.ProxyPingEvent;
+import net.md_5.bungee.api.event.ServerConnectEvent;
 import net.md_5.bungee.chat.ComponentSerializer;
 import net.md_5.bungee.http.HttpClient;
 import net.md_5.bungee.jni.cipher.BungeeCipher;
@@ -27,29 +52,30 @@ import net.md_5.bungee.protocol.DefinedPacket;
 import net.md_5.bungee.protocol.PacketWrapper;
 import net.md_5.bungee.protocol.Protocol;
 import net.md_5.bungee.protocol.ProtocolConstants;
-import net.md_5.bungee.protocol.packet.*;
-import net.md_5.bungee.util.BoundedArrayList;
+import net.md_5.bungee.protocol.packet.EncryptionRequest;
+import net.md_5.bungee.protocol.packet.EncryptionResponse;
+import net.md_5.bungee.protocol.packet.Handshake;
+import net.md_5.bungee.protocol.packet.Kick;
+import net.md_5.bungee.protocol.packet.LegacyHandshake;
+import net.md_5.bungee.protocol.packet.LegacyPing;
+import net.md_5.bungee.protocol.packet.LoginPayloadResponse;
+import net.md_5.bungee.protocol.packet.LoginRequest;
+import net.md_5.bungee.protocol.packet.LoginSuccess;
+import net.md_5.bungee.protocol.packet.PingPacket;
+import net.md_5.bungee.protocol.packet.PluginMessage;
+import net.md_5.bungee.protocol.packet.StatusRequest;
+import net.md_5.bungee.protocol.packet.StatusResponse;
+import net.md_5.bungee.util.AllowedCharacters;
 import net.md_5.bungee.util.QuietException;
 import ru.afek.auth.AuthUser;
 import ru.afek.auth.config.SettingsAuth;
 import ru.afek.auth.utils.BlackListIp;
-import ru.afek.bungeecord.commons.MethodCommon;
 import ru.afek.bungeecord.commons.StringCommon;
+import ru.leymooo.botfilter.BotFilterUser;
 import ru.leymooo.botfilter.config.Settings;
 import ru.leymooo.botfilter.utils.FastException;
 import ru.leymooo.botfilter.utils.IPUtils;
 import ru.leymooo.botfilter.utils.PingLimiter;
-
-import javax.crypto.SecretKey;
-import java.math.BigInteger;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.util.List;
-import java.util.UUID;
-import java.util.logging.Level;
 
 @RequiredArgsConstructor
 public class InitialHandler extends PacketHandler implements PendingConnection
@@ -66,7 +92,9 @@ public class InitialHandler extends PacketHandler implements PendingConnection
     private LoginRequest loginRequest;
     private EncryptionRequest request;
     @Getter
-    private final List<PluginMessage> relayMessages = new BoundedArrayList<>( 128 );
+    private PluginMessage brandMessage;
+    @Getter
+    private final Set<String> registeredChannels = new HashSet<>();
     private State thisState = State.HANDSHAKE;
     private final Unsafe unsafe = new Unsafe()
     {
@@ -139,11 +167,7 @@ public class InitialHandler extends PacketHandler implements PendingConnection
     @Override
     public void handle(PluginMessage pluginMessage) throws Exception
     {
-        // TODO: Unregister?
-        if ( PluginMessage.SHOULD_RELAY.apply( pluginMessage ) )
-        {
-            relayMessages.add( pluginMessage );
-        }
+        this.relayMessage( pluginMessage );
     }
 
     @Override
@@ -352,23 +376,54 @@ public class InitialHandler extends PacketHandler implements PendingConnection
 
     public void delayedHandleOfLoginRequset()
     {
-        if ( getName().contains( " " ) )
+        if ( !AllowedCharacters.isValidName( loginRequest.getData(), onlineMode ) )
         {
             disconnect( bungee.getTranslation( "name_invalid" ) );
             return;
         }
+
+        if (getName().contains(".")) {
+            disconnect(bungee.getTranslation("name_invalid"));
+            return;
+        }
+
+        if (getName().length() > 16) {
+            disconnect(bungee.getTranslation("name_too_long"));
+            return;
+        }
+
+        if (BlackListIp.isManyChecks(IPUtils.getAddress(this.ch))) {
+            disconnect(StringCommon.color("&cВы забанены на 10 минут!"));
+            return;
+        }
+
+//        if (!this.checkMessage(this.whitelist, this.getName())) {
+//            this.disconnect("§c\u0412 \u043d\u0438\u043a\u0435 \u0435\u0441\u0442\u044c \u043d\u0435\u0434\u043e\u043f\u0443\u0441\u0442\u0438\u043c\u044b\u0435 \u0441\u0438\u043c\u0432\u043e\u043b\u044b \\n§c\u0420\u0430\u0437\u0440\u0435\u0448\u0435\u043d\u043e \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u044c \u0442\u043e\u043b\u044c\u043a\u043e \u0446\u0438\u0444\u0440\u044b \u0438 \u0441\u0438\u043c\u0432\u043e\u043b\u044b \u043b\u0430\u0442\u0438\u043d\u0441\u043a\u043e\u0433\u043e \u0430\u043b\u0444\u0430\u0432\u0438\u0442\u0430.");
+//            return;
+//        }
+
         int limit = BungeeCord.getInstance().config.getPlayerLimit();
         if ( limit > 0 && bungee.getOnlineCountBF( false ) >= limit )//BotFilter
-        {
+            {
             disconnect( bungee.getTranslation( "proxy_full" ) );
             return;
         }
 
         // If offline mode and they are already on, don't allow connect
         // We can just check by UUID here as names are based on UUID
-        if ( !isOnlineMode() && bungee.getPlayer( getUniqueId() ) != null )
-        {
+        if ( !isOnlineMode() && bungee.getPlayer( getUniqueId() ) != null ) {
             disconnect( bungee.getTranslation( "already_connected_proxy" ) );
+            return;
+        }
+
+        int ipLimit = bungee.getAuth().getSql().getUserIpLimit(this.getName().toLowerCase());
+        int playerAccountNumber = 1;
+
+        for (BotFilterUser user : bungee.getBotFilter().getUserCache().values())
+            if (!user.getName().equalsIgnoreCase(getName()) && user.getIp().equalsIgnoreCase(IPUtils.getAddress(this.ch).getHostAddress())) playerAccountNumber++;
+
+        if (playerAccountNumber > ipLimit) {
+            disconnect(StringCommon.color(SettingsAuth.IMP.USER_COUNT_MSG));
             return;
         }
 
@@ -377,22 +432,6 @@ public class InitialHandler extends PacketHandler implements PendingConnection
             disconnect(StringCommon.color(String.join("\n", SettingsAuth.IMP.WHITELIST.KICK_MESSAGE)));
             return;
         }
-
-        if (BlackListIp.isManyChecks(IPUtils.getAddress(this.ch))) {
-            disconnect(StringCommon.color(SettingsAuth.IMP.PLAYER_BANNED_BY_TRY));
-            return;
-        }
-
-        if (!MethodCommon.checkMessage(this.getName())) {
-            this.disconnect(StringCommon.color(SettingsAuth.IMP.PLAYER_NAME_ERROR));
-            return;
-        }
-
-        if (bungee.getAuth().getIpListCheck().getCountUser(IPUtils.getAddress(this.ch).getHostAddress()) > SettingsAuth.IMP.USER_COUNT) {
-            disconnect(StringCommon.color(SettingsAuth.IMP.USER_COUNT_MSG));
-            return;
-        }
-        //Auth end
 
         Callback<PreLoginEvent> callback = new Callback<PreLoginEvent>()
         {
@@ -427,7 +466,6 @@ public class InitialHandler extends PacketHandler implements PendingConnection
                         }
                     } );
                 }
-                thisState = State.ENCRYPT;
             }
         };
 
@@ -549,7 +587,7 @@ public class InitialHandler extends PacketHandler implements PendingConnection
         userCon.setCompressionThreshold( BungeeCord.getInstance().config.getCompressionThreshold() );
         //userCon.init();
 
-        sendLoginSuccess(sendLoginSuccess);
+        sendLoginSuccess( sendLoginSuccess );
 
         if (Settings.IMP.PROTECTION.ALWAYS_CHECK || this.bungee.getBotFilter().needCheck(this.getName(), this.getAddress().getAddress())) {
             this.sendLoginSuccess(!sendLoginSuccess); //Send a loginSuccess if sendLoginSuccess is false
@@ -623,7 +661,6 @@ public class InitialHandler extends PacketHandler implements PendingConnection
         {
             server = bungee.getServerInfo( listener.getDefaultServer() );
         }
-
         userCon.connect( server, null, true, ServerConnectEvent.Reason.JOIN_PROXY );
         if (userCon.isSession())
             userCon.sendMessages(StringCommon.color(SettingsAuth.IMP.LOGIN.VALID_SESSION));
@@ -634,7 +671,8 @@ public class InitialHandler extends PacketHandler implements PendingConnection
     {
         if ( send )
         {
-            unsafe.sendPacket( new LoginSuccess( getUniqueId(), getName() ) );
+            LoginSuccess packet = new LoginSuccess( getUniqueId(), getName() );
+            unsafe.sendPacket( packet );
         }
     }
 
@@ -767,5 +805,40 @@ public class InitialHandler extends PacketHandler implements PendingConnection
             throw new FastException( errorMessage );
         }
     }
-    //BotFilter end
+
+    public void relayMessage(PluginMessage input) throws Exception
+    {
+        relayMessage0( input );
+    }
+
+    public boolean relayMessage0(PluginMessage input) throws Exception
+    {
+        if ( input.getTag().equals( "REGISTER" ) || input.getTag().equals( "minecraft:register" ) )
+        {
+            String content = new String( input.getData(), StandardCharsets.UTF_8 );
+
+            for ( String id : content.split( "\0" ) )
+            {
+                Preconditions.checkState( registeredChannels.size() < 128, "Too many registered channels" );
+                Preconditions.checkArgument( id.length() < 128, "Channel name too long" );
+
+                registeredChannels.add( id );
+            }
+            return true;
+        } else if ( input.getTag().equals( "UNREGISTER" ) || input.getTag().equals( "minecraft:unregister" ) )
+        {
+            String content = new String( input.getData(), StandardCharsets.UTF_8 );
+
+            for ( String id : content.split( "\0" ) )
+            {
+                registeredChannels.remove( id );
+            }
+            return true;
+        } else if ( input.getTag().equals( "MC|Brand" ) || input.getTag().equals( "minecraft:brand" ) )
+        {
+            brandMessage = input;
+            return true;
+        }
+        return false;
+    }
 }
