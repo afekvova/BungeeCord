@@ -71,7 +71,7 @@ public class Auth {
         AuthUser authUser = this.getUser(userConnection.getName());
         if (authUser == null) return;
         if (!authUser.getEmail().equalsIgnoreCase("null")) return;
-        SettingsAuth.IMP.LOGIN.EMAIL_ADD_MSG.forEach(msg -> userConnection.sendMessage(StringCommon.color(msg)));
+//        SettingsAuth.IMP.LOGIN.EMAIL_ADD_MSG.forEach(msg -> userConnection.sendMessage(StringCommon.color(msg)));
     }
 
     public boolean sendEmailRecovery(String name) {

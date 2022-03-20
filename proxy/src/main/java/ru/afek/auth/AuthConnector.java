@@ -1,8 +1,6 @@
 package ru.afek.auth;
 
 import com.google.common.base.Preconditions;
-import com.mojang.brigadier.context.StringRange;
-import com.mojang.brigadier.suggestion.Suggestion;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import net.md_5.bungee.BungeeCord;
@@ -10,7 +8,10 @@ import net.md_5.bungee.UserConnection;
 import net.md_5.bungee.Util;
 import net.md_5.bungee.netty.ChannelWrapper;
 import net.md_5.bungee.protocol.Protocol;
-import net.md_5.bungee.protocol.packet.*;
+import net.md_5.bungee.protocol.packet.Chat;
+import net.md_5.bungee.protocol.packet.ClientSettings;
+import net.md_5.bungee.protocol.packet.KeepAlive;
+import net.md_5.bungee.protocol.packet.PluginMessage;
 import ru.afek.auth.config.SettingsAuth;
 import ru.afek.auth.hash.PasswordSecurity;
 import ru.afek.auth.utils.BlackListIp;
@@ -134,16 +135,6 @@ public class AuthConnector extends MoveHandlerAuth {
     }
 
     @Override
-    public void handle(TabCompleteRequest response) {
-        response.setAssumeCommand(false);
-    }
-
-    @Override
-    public void handle(TabCompleteResponse response) {
-        response.getSuggestions().getList().add(new Suggestion(new StringRange(1, 1), "login"));
-    }
-
-    @Override
     public void handle(final Chat chat) throws Exception {
         final String chatmessage = chat.getMessage();
         if (chatmessage.length() > 256) {
@@ -260,7 +251,7 @@ public class AuthConnector extends MoveHandlerAuth {
             return;
         }
 
-        final AuthUser user = new AuthUser(this.name.toLowerCase(), hash, this.ip, System.currentTimeMillis(), "null", SettingsAuth.IMP.USER_COUNT);
+        final AuthUser user = new AuthUser(this.name.toLowerCase(), hash, this.ip, System.currentTimeMillis(), "null");
         this.auth.saveUser(this.name, user);
         this.state = Auth.CheckStateAuth.SUCCESSFULLY;
         this.completeCheck(false);

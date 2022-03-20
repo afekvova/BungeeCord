@@ -4,7 +4,6 @@ import com.google.common.collect.Sets;
 import net.md_5.bungee.BungeeCord;
 import ru.afek.auth.Auth;
 import ru.afek.auth.AuthUser;
-import ru.afek.auth.config.SettingsAuth;
 import ru.afek.bungeecord.SQLConnection;
 
 import java.sql.PreparedStatement;
@@ -90,7 +89,7 @@ public class SQLConnectionAuth {
                 String ip = set.getString("Ip");
                 String email = set.getString("Email");
                 long session = Long.parseLong(set.getString("Session"));
-                AuthUser user = new AuthUser(name, password, ip, session, email, SettingsAuth.IMP.USER_COUNT);
+                AuthUser user = new AuthUser(name, password, ip, session, email);
                 this.auth.addUserToCache(user);
                 i++;
             }
@@ -98,17 +97,17 @@ public class SQLConnectionAuth {
             this.logger.log(Level.INFO, "[Auth] Данные игроков успешно загружены ({0})", i);
         }
 
-        try (PreparedStatement statament = this.sqlConnection.getConnection().prepareStatement("SELECT * FROM `IpLimit`;");
-             ResultSet set = statament.executeQuery()) {
-            while (set.next()) {
-                String name = set.getString("Name");
-                int ipLimit = set.getInt("IpLimitSize");
-                if (!this.auth.isRegistered(name)) continue;
-
-                AuthUser user = this.auth.getUser(name);
-                user.setIpLimit(ipLimit);
-            }
-        }
+//        try (PreparedStatement statament = this.sqlConnection.getConnection().prepareStatement("SELECT * FROM `IpLimit`;");
+//             ResultSet set = statament.executeQuery()) {
+//            while (set.next()) {
+//                String name = set.getString("Name");
+//                int ipLimit = set.getInt("IpLimitSize");
+//                if (!this.auth.isRegistered(name)) continue;
+//
+//                AuthUser user = this.auth.getUser(name);
+//                user.setIpLimit(ipLimit);
+//            }
+//        }
     }
 
     public void removeUserAuth(String name) {
@@ -163,22 +162,22 @@ public class SQLConnectionAuth {
         }
         return similarPlayers;
     }
-
-    public int getUserIpLimit(String name) {
-        int limit = SettingsAuth.IMP.USER_COUNT;
-        ConcurrentHashMap<String, String> similarPlayers = new ConcurrentHashMap<>();
-        try (PreparedStatement statament = this.sqlConnection.getConnection().prepareStatement("SELECT `IpLimitSize` FROM `IpLimit` where `Name` = '" + name + "' LIMIT 1;");
-             ResultSet set = statament.executeQuery()) {
-            if (set.next()) {
-                limit = set.getInt("IpLimitSize");
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return limit;
-    }
+//
+//    public int getUserIpLimit(String name) {
+//        int limit = SettingsAuth.IMP.USER_COUNT;
+//        ConcurrentHashMap<String, String> similarPlayers = new ConcurrentHashMap<>();
+//        try (PreparedStatement statament = this.sqlConnection.getConnection().prepareStatement("SELECT `IpLimitSize` FROM `IpLimit` where `Name` = '" + name + "' LIMIT 1;");
+//             ResultSet set = statament.executeQuery()) {
+//            if (set.next()) {
+//                limit = set.getInt("IpLimitSize");
+//            }
+//
+//        } catch (SQLException e) {
+//            e.printStackTrace();
+//        }
+//
+//        return limit;
+//    }
 
     public Set<String> getEqualIp(String name, String ip) {
         ConcurrentHashMap<String, String> playerIps = loadUsersIp();

@@ -15,7 +15,6 @@ public class AuthUser {
     String name, password, ip;
     long session;
     String email;
-    int ipLimit;
 
     public void logout() {
         this.session = -1L;

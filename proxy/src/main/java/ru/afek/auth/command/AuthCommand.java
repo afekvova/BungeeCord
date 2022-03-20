@@ -111,20 +111,20 @@ public class AuthCommand extends Command {
                 break;
             }
 
-            case "accountlimit": {
-                if (args.length != 3) {
-                    sender.sendMessage(StringCommon.color("%prefix% /auth accountlimit &f[&6игрок&f] [&6количество&f] - Изменить количество аккаунтов игроку"));
-                    return;
-                }
-
-                if (!this.isStringInt(args[2])) {
-                    sender.sendMessage(StringCommon.color("%prefix% /auth accountlimit &f[&6игрок&f] [&6количество&f] - Изменить количество аккаунтов игроку"));
-                    return;
-                }
-
-                this.setAccountIpLimit(sender, args[1], Integer.parseInt(args[2]));
-                break;
-            }
+//            case "accountlimit": {
+//                if (args.length != 3) {
+//                    sender.sendMessage(StringCommon.color("%prefix% /auth accountlimit &f[&6игрок&f] [&6количество&f] - Изменить количество аккаунтов игроку"));
+//                    return;
+//                }
+//
+//                if (!this.isStringInt(args[2])) {
+//                    sender.sendMessage(StringCommon.color("%prefix% /auth accountlimit &f[&6игрок&f] [&6количество&f] - Изменить количество аккаунтов игроку"));
+//                    return;
+//                }
+//
+//                this.setAccountIpLimit(sender, args[1], Integer.parseInt(args[2]));
+//                break;
+//            }
 
             default:
                 this.sendHelp(sender);
@@ -190,7 +190,7 @@ public class AuthCommand extends Command {
         } catch (NoSuchAlgorithmException e) {
             return;
         }
-        final AuthUser user = new AuthUser(name.toLowerCase(), hash, "0.0.0.0", -1L, "null", SettingsAuth.IMP.USER_COUNT);
+        final AuthUser user = new AuthUser(name.toLowerCase(), hash, "0.0.0.0", -1L, "null");
         BungeeCord.getInstance().getAuth().saveUser(name, user);
         sender.sendMessage(StringCommon.color("&f[&6!&f] &l&fВы успешно зарегистрировали игрока - &6" + name));
     }
@@ -203,7 +203,7 @@ public class AuthCommand extends Command {
         sender.sendMessage(StringCommon.color("&6/auth unregister &f[&6игрок&f] - Удалить игрока"));
         sender.sendMessage(StringCommon.color("&6/auth changepassword &f[&6игрок&f] [&6пароль&f] - Изменить пароль игроку"));
         sender.sendMessage(StringCommon.color("&6/auth changeemail &f[&6игрок&f] [&6эл. почта&f] - Изменить почту игроку"));
-        sender.sendMessage(StringCommon.color("&6/auth accountlimit &f[&6игрок&f] [&6количество&f] - Изменить количество аккаунтов игроку"));
+//        sender.sendMessage(StringCommon.color("&6/auth accountlimit &f[&6игрок&f] [&6количество&f] - Изменить количество аккаунтов игроку"));
         sender.sendMessage(StringCommon.color("&6/auth info &f[&6игрок&f] - Посмотреть информацию о игроке"));
     }
 

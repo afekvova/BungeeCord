@@ -19,9 +19,9 @@ public class SettingsAuth extends Config {
     @Comment("Сколько времени у игрока будет действовать сессия. В миллисекундах. 1 сек = 1000")
     public int SESSION_TIME = 1800000;
 
-    @Comment("Сколько аккаунт может иметь пользователь")
-    public int USER_COUNT = 5;
-    public String USER_COUNT_MSG = "&cУ вас нее может быть больше 5 аккаунтов.";
+    //    @Comment("Сколько аккаунт может иметь пользователь")
+    //    public int USER_COUNT = 5;
+    //    public String USER_COUNT_MSG = "&cУ вас нее может быть больше 5 аккаунтов.";
     @Comment("Сообщение когда игрок не смог ввести пароль 3 раза")
     public String PLAYER_BANNED_BY_TRY = "&cВы забанены на 10 минут!";
     public String PLAYER_NAME_ERROR = "&cВ нике есть недопустимые символы \\n§cРазрешено использовать только цифры и символы латинского алфавита.";
@@ -41,11 +41,11 @@ public class SettingsAuth extends Config {
         public String VALID_SESSION = "%prefix% &fВы автоматически авторизовались";
         public String EMAIL_RECOVERY = "%prefix% &fЗабыли пароль? Восстановить пароль: /recovery <email>";
         public String EMAIL_RECOVERY_ACTION_BAR = "&6Восстановить пароль: /recovery <email>";
-        public List<String> EMAIL_ADD_MSG = Arrays.asList("__________________________________",
-                "Здраствуйте привяжите то-то-то",
-                "мы беспокоимся о вашей безопасноти",
-                "и т.д",
-                "________________________________");
+//        public List<String> EMAIL_ADD_MSG = Arrays.asList("__________________________________",
+//                "Здраствуйте привяжите то-то-то",
+//                "мы беспокоимся о вашей безопасноти",
+//                "и т.д",
+//                "________________________________");
     }
 
     @Create
