@@ -6,7 +6,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.util.internal.PlatformDependent;
 import lombok.Getter;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import net.md_5.bungee.api.Title;
@@ -316,7 +315,7 @@ public final class UserConnection implements ProxiedPlayer {
     }
 
     private String connectionFailMessage(Throwable cause) {
-        return groups.contains("admin") ? Util.exception(cause, false) : cause.getClass().getName();
+        return permissions.contains("bungeecord.detailedexception") ? Util.exception(cause, false) : cause.getClass().getName();
     }
 
     @Override
