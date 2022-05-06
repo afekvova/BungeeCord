@@ -182,6 +182,7 @@ public class ServerConnector extends PacketHandler
     @Override
     public void handle(Login login) throws Exception
     {
+        System.out.println("test");
         Preconditions.checkState( thisState == State.LOGIN, "Not expecting LOGIN" );
 
         ServerConnection server = new ServerConnection( ch, target );

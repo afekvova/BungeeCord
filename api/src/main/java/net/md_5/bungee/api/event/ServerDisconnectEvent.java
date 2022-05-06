@@ -19,11 +19,11 @@ public class ServerDisconnectEvent extends Event
     /**
      * Player disconnecting from a server.
      */
-    @NonNull
+     
     private final ProxiedPlayer player;
     /**
      * Server the player is disconnecting from.
      */
-    @NonNull
+     
     private final ServerInfo target;
 }

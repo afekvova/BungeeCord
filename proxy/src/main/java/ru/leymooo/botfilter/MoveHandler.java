@@ -1,10 +1,7 @@
 package ru.leymooo.botfilter;
 
 import net.md_5.bungee.netty.PacketHandler;
-import ru.leymooo.botfilter.packets.Player;
-import ru.leymooo.botfilter.packets.PlayerPosition;
-import ru.leymooo.botfilter.packets.PlayerPositionAndLook;
-import ru.leymooo.botfilter.packets.TeleportConfirm;
+import ru.leymooo.botfilter.packets.*;
 
 /**
  * @author Leymooo

@@ -18,7 +18,7 @@ import net.md_5.bungee.protocol.packet.PluginMessage;
 public class ForgeClientHandler
 {
 
-    @NonNull
+     
     private final UserConnection con;
 
     /**
@@ -30,7 +30,7 @@ public class ForgeClientHandler
 
     private final ArrayDeque<PluginMessage> packetQueue = new ArrayDeque<PluginMessage>();
 
-    @NonNull
+     
     @Setter(AccessLevel.PACKAGE)
     private ForgeClientHandshakeState state = ForgeClientHandshakeState.HELLO;
 

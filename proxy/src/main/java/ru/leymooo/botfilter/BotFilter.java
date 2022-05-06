@@ -73,11 +73,10 @@ public class BotFilter
     {
         Settings.IMP.reload( new File( "BotFilter", "config.yml" ) );
         Scoreboard.DISABLE_DUBLICATE = Settings.IMP.FIX_SCOREBOARD_TEAMS;
-        checkForUpdates( startup );
-        if ( !CachedCaptcha.generated )
-        {
+//        checkForUpdates( startup );
+        if (!CachedCaptcha.generated)
             CaptchaGeneration.generateImages();
-        }
+
         normalState = getCheckState( Settings.IMP.PROTECTION.NORMAL );
         attackState = getCheckState( Settings.IMP.PROTECTION.ON_ATTACK );
         PacketUtils.init();

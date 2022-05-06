@@ -26,7 +26,7 @@ public class Entity extends Content
      *
      * Should be valid UUID. TODO : validate?
      */
-    @NonNull
+     
     private String id;
     /**
      * Name to display as the entity.

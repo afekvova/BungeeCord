@@ -3,12 +3,7 @@ package ru.leymooo.botfilter.caching;
 /**
  * @author Leymooo
  */
-public final class PacketsPosition
-{
-
-    private PacketsPosition()
-    {
-    }
+public final class PacketsPosition {
 
     public static int LOGIN = 0;
     public static int CHUNK = 1;

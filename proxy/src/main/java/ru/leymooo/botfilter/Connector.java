@@ -25,6 +25,7 @@ import ru.leymooo.botfilter.caching.PacketUtils;
 import ru.leymooo.botfilter.caching.PacketUtils.KickType;
 import ru.leymooo.botfilter.caching.PacketsPosition;
 import ru.leymooo.botfilter.config.Settings;
+import ru.leymooo.botfilter.packets.JoinGame;
 import ru.leymooo.botfilter.utils.FailedUtils;
 import ru.leymooo.botfilter.utils.IPUtils;
 import ru.leymooo.botfilter.utils.ManyChecksUtils;

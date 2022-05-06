@@ -46,12 +46,12 @@ public class ServerConnectRequest
     /**
      * Target server to connect to.
      */
-    @NonNull
+     
     private final ServerInfo target;
     /**
      * Reason for connecting to server.
      */
-    @NonNull
+     
     private final ServerConnectEvent.Reason reason;
     /**
      * Callback to execute post request.

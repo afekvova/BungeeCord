@@ -45,7 +45,7 @@ public class Favicon
     /**
      * The base64 encoded favicon, including MIME header.
      */
-    @NonNull
+     
     @Getter
     private final String encoded;
 

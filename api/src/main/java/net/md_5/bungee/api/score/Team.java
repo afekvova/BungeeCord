@@ -11,7 +11,7 @@ import lombok.NonNull;
 public class Team
 {
 
-    @NonNull
+     
     private final String name;
     private String displayName;
     private String prefix;
