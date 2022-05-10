@@ -54,6 +54,8 @@ public class Settings extends Config
     public boolean FIX_SCOREBOARD_TEAMS = true;
     @Comment("Записывать ли IP адреса игроков/ботов которые провалили проверку в файл?")
     public boolean SAVE_FAILED_IPS_TO_FILE = true;
+    @Comment({"Dimensions:", "-1: Nether, 0: Overworld, 1: End"})
+    public int DIMENSION_TYPE = 0;
 
     public void reload(File file)
     {

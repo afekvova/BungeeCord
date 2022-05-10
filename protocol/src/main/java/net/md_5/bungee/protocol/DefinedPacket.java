@@ -5,7 +5,10 @@ import com.google.common.base.Preconditions;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
+import io.netty.handler.codec.EncoderException;
 import lombok.RequiredArgsConstructor;
+import net.kyori.adventure.nbt.BinaryTagIO;
+import net.kyori.adventure.nbt.CompoundBinaryTag;
 import ru.leymooo.botfilter.utils.FastBadPacketException;
 import ru.leymooo.botfilter.utils.FastException;
 import ru.leymooo.botfilter.utils.FastOverflowPacketException;
@@ -15,6 +18,7 @@ import se.llbit.nbt.Tag;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -24,6 +28,18 @@ public abstract class DefinedPacket {
 
     private static final FastException VARINT_TOO_BIG = new FastException("varint too big"); //BotFilter
     private static final FastException ILLEGAL_BUF = new FastException("Buffer is no longer readable"); //BotFilter
+
+    //Auth start
+
+    public void writeCompoundTag(CompoundBinaryTag compoundTag, ByteBuf buf) {
+        try {
+            BinaryTagIO.writer().write(compoundTag, (OutputStream) new ByteBufOutputStream(buf));
+        } catch (IOException e) {
+            throw new EncoderException("Unable to decode NBT CompoundTag");
+        }
+    }
+
+    //Auth end
 
     public static void writeString(String s, ByteBuf buf) {
         if (s.length() > Short.MAX_VALUE) {

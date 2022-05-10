@@ -5,6 +5,8 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import java.util.HashMap;
 import java.util.Random;
+
+import me.afek.bungee.DimensionType;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -95,7 +97,7 @@ public class PacketUtils
 
         DefinedPacket[] packets =
         {
-            new JoinGame( CLIENTID ), //0
+            new JoinGame( CLIENTID, DimensionType.valueOf(Settings.IMP.DIMENSION_TYPE)), //0
             new EmptyChunkPacket( 0, 0 ), //1
             new TimeUpdate( 1, 23700 ), //2
             new PlayerAbilities( (byte) 6, 0f, 0f ), //3

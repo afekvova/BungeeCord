@@ -38,6 +38,12 @@
 
     <dependencies>
         <dependency>
+            <groupId>net.kyori</groupId>
+            <artifactId>adventure-nbt</artifactId>
+            <version>4.10.1</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
             <groupId>net.md-5</groupId>
             <artifactId>brigadier</artifactId>
             <version>1.0.16-SNAPSHOT</version>
